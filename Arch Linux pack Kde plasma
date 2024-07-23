@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# Ensure the script is run as root
+if [ "$EUID" -ne 0 ]; then
+  echo "Please run as root"
+  exit
+fi
+
+# Update system and install base packages
+pacman -Syu --noconfirm
+pacman -S --noconfirm base base-devel linux linux-firmware
+
+# Install and configure GRUB
+pacman -S --noconfirm grub
+grub-install --target=i386-pc /dev/sda
+grub-mkconfig -o /boot/grub/grub.cfg
+
+# Install Xorg and KDE Plasma
+pacman -S --noconfirm xorg sddm plasma plasma-wayland-session kde-applications
+
+# Enable and start SDDM
+systemctl enable sddm
+systemctl start sddm
+
+# Install Wine and Winetricks
+pacman -S --noconfirm wine wine-mono wine-gecko winetricks
+
+# Configure Wine
+winecfg
+
+# Install common applications
+pacman -S --noconfirm firefox thunderbird libreoffice-fresh vlc gimp
+
+# Install Windows-like theme in KDE Plasma
+sudo -u $SUDO_USER bash <<EOF
+  # KDE configuration steps need to be run as the logged-in user
+  plasmapkg2 --install org.kde.windows10dark
+  kwriteconfig5 --file ~/.config/kwinrc --group WindowSwitcher --key Layout "org.kde.breeze"
+  kwriteconfig5 --file ~/.config/plasmashellrc --group Panel --key visibility "1"
+  plasmashell --replace &
+EOF
+
+# Install additional Windows applications via Wine
+winetricks notepad++
+
+echo "Installation and configuration complete. Reboot your system."
