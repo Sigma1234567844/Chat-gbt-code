@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# Ensure the script is run as root
+if [ "$(id -u)" != "0" ]; then
+    echo "This script must be run as root" 1>&2
+    exit 1
+fi
+
+# Update and install essential packages
+apt update
+apt install -y build-essential devscripts debhelper ubuntu-dev-tools git live-build
+
+# Install Cinnamon desktop environment
+apt install -y cinnamon-desktop-environment
+
+# Install gnome-tweak-tool for customization
+apt install -y gnome-tweak-tool
+
+# Download and apply a Windows-like theme
+git clone https://github.com/B00merang-Project/Windows-10.git
+mkdir -p ~/.themes
+cp -r Windows-10 ~/.themes/
+
+# Apply the Windows-like theme using gsettings
+gsettings set org.cinnamon.theme name "Windows-10"
+gsettings set org.cinnamon.desktop.interface gtk-theme "Windows-10"
+gsettings set org.cinnamon.desktop.wm.preferences theme "Windows-10"
+
+# Install Wine and dependencies
+dpkg --add-architecture i386
+apt update
+apt install -y wine64 wine32
+
+# Install Steam and Proton
+apt install -y steam
+
+# Create a live-build configuration directory
+mkdir -p ~/live-build-config
+cd ~/live-build-config
+
+# Bootstrap a Debian-based system
+lb config --distribution buster --debian-installer live
+
+# Add custom themes and configurations
+mkdir -p config/includes.chroot/etc/skel/.themes
+cp -r ~/.themes/Windows-10 config/includes.chroot/etc/skel/.themes/
+
+# Add custom package list
+mkdir -p config/package-lists
+echo "cinnamon-desktop-environment" >> config/package-lists/my.list.chroot
+echo "wine64" >> config/package-lists/my.list.chroot
+echo "wine32" >> config/package-lists/my.list.chroot
+echo "steam" >> config/package-lists/my.list.chroot
+
+# Build the ISO
+lb build
+
+# Notify the user of completion and provide the path to the ISO
+echo "Custom Linux distribution ISO has been built successfully."
+echo "You can find the ISO file in ~/live-build-config/live-image-amd64.hybrid.iso"
